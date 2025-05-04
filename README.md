@@ -94,3 +94,7 @@ The MIT License is a permissive open-source license that allows:
 5. **No Warranty**: The software is provided "as is" without any warranty of any kind.
 
 This license is designed to be business-friendly while ensuring proper attribution to the original author. It allows for maximum freedom in using the template while maintaining the integrity of your original work.
+
+## Special Thanks
+
+This project's structure and implementation of Cursor rules were inspired by the article ["Writing Cursor Rules with a Cursor Rule"](https://www.adithyan.io/blog/writing-cursor-rules-with-a-cursor-rule) by Adithyan. The article provided valuable insights into creating effective Cursor rules and helped shape the approach taken in this template. Special thanks to Adithyan for sharing his knowledge and experience with the Cursor community.
