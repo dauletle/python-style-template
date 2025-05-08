@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: false
----
 # Python Programming Style Guidelines
 
 ## Introduction
@@ -253,7 +248,7 @@ class User:
 # Bad examples
 class User:
     def set_and_get_password(self, new_password):
-        """Both changes state and returns information."""
+        """Set a new password and return the hash (violates command-query separation)."""
         self.password_hash = hash_password(new_password)
         return self.password_hash
 ```
@@ -591,6 +586,53 @@ def safe_division(a, b):
         return a / b
     except:  # Catching all exceptions
         return None  # Silent failure with None return
+```
+
+5. **Exception Handling**
+   - Never pass exceptions silently in try-except blocks
+   - Always log errors when they are caught, even if they are expected
+   - Use specific exception types rather than catching all exceptions
+   - Include context in error messages and logs
+
+```python
+# Good examples
+def process_data(data):
+    """Process data with proper error handling."""
+    try:
+        result = complex_operation(data)
+        return result
+    except ValueError as e:
+        logger.error(f"Invalid data format: {str(e)}")
+        raise  # Re-raise after logging
+    except ConnectionError as e:
+        logger.error(f"Failed to connect to service: {str(e)}")
+        raise  # Re-raise after logging
+
+def safe_operation():
+    """Perform operation with expected errors."""
+    try:
+        result = risky_operation()
+        return result
+    except ExpectedError as e:
+        logger.warning(f"Expected error occurred: {str(e)}")
+        return None  # Return default value after logging
+
+# Bad examples
+def process_data(data):
+    """Process data with improper error handling."""
+    try:
+        result = complex_operation(data)
+        return result
+    except:  # Catching all exceptions silently
+        return None
+
+def safe_operation():
+    """Perform operation with silent error handling."""
+    try:
+        result = risky_operation()
+        return result
+    except Exception:  # Catching and passing silently
+        pass
 ```
 
 ### 4. Code Organization and Layout
@@ -1014,7 +1056,7 @@ def validate_user_input(data: dict) -> bool:
 
 # Bad examples
 def validate_input(data):
-    # Validate user input  # Bad: Redundant
+    # Validate user input  # Bad: Redundant comment
     # TODO: Update password requirements  # Bad: Outdated TODO
     # Minimum 8 characters  # Bad: Outdated requirement
     if len(data.get('password', '')) < 8:  # Bad: Outdated validation
@@ -1024,8 +1066,8 @@ def validate_input(data):
 
 ## Real-World Examples
 
-* [Example User Model](mdc:../models/user.py)
-* [Example Service Class](mdc:../services/auth.py)
+* @Example User Model
+* @Example Service Class
 
 ## Common Pitfalls
 
