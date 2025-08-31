@@ -2,28 +2,30 @@
 
 ## Introduction
 
-This rule defines the standard Python programming style for this project, ensuring consistency, readability, and maintainability. We follow PEP 8 guidelines with some project-specific conventions.
+This rule defines the standard Python programming style for this project, ensuring consistency, readability, and maintainability. We follow PEP 8 guidelines with some project-specific conventions, guided by the principles from "A Philosophy of Software Design" by John K. Ousterhout.
 
 ## Core Principles
 
 ### 1. Managing Complexity
-- Complexity is the most important technical topic in software development
-- Reduce complexity by dividing systems into independent subsystems
-- Aim for characteristics: simple, loosely-coupled, extensible, reusable, lean, stratified, standardized
-- Make subsystems meaningful by restricting communications and preventing cycles
+- **Complexity is the enemy**: The most important goal in software design is to reduce complexity
+- **Information hiding**: The key to managing complexity is to hide information so that developers don't need to know everything
+- **Deep modules**: Create modules with simple interfaces that hide complex implementations
+- **General-purpose design**: Prefer general-purpose solutions over special-purpose ones
+- **Eliminate dependencies**: Reduce the number of dependencies between modules
 
-### 2. Design Principles
-- Design is "wicked": You must "solve" the problem once to define it, then solve it again to create a working solution
-- Design relies on heuristics and trial-and-error
-- Iterate on designs; when you find something good, apply what you learned to create an even better design
-- Capture design work in code comments, documentation, or diagrams
+### 2. Design Philosophy
+- **Focus on what matters**: Separate what's important from what's not important
+- **Design is iterative**: You must solve the problem once to understand it, then solve it again with better understanding
+- **Comments are essential**: Use comments to document design decisions, not just code behavior
+- **Interface design first**: Design interfaces before implementations
+- **Strive for simplicity**: Simple solutions are usually better than complex ones
 
-### 3. Class Design
-- Each class should implement only one Abstract Data Type (ADT)
-- If a subset of a class' methods operate on a subset of its data, move them into a new class
-- Minimize assumptions required to use an interface
-- Only add public members consistent with the class's abstraction
-- Keep class interfaces small, implementations insulated, and minimize collaboration with other classes
+### 3. Module and Class Design
+- **Deep modules**: Modules should have simple interfaces that hide complex implementations
+- **Single responsibility**: Each module should have one clear purpose
+- **Minimal interfaces**: Keep interfaces as small as possible while still being useful
+- **Information hiding**: Hide implementation details behind meaningful abstractions
+- **Consistency**: Use consistent patterns across similar modules
 
 ## Pattern Description
 
@@ -154,51 +156,102 @@ class User:
 
 ### 2. Function Design Principles
 
-1. **Use Descriptive Names**
-   - Function names should clearly describe what the function does
-   - Names should be long enough to be descriptive but not so long they become unwieldy
-   - A routine with a long, complicated name may be doing too much
+1. **Function Length and Complexity**
+   - **Focus on complexity, not length**: Function length is not inherently bad; focus on reducing complexity
+   - **Deep functions are good**: Functions that hide complex implementations behind simple interfaces are valuable
+   - **Avoid premature decomposition**: Don't break up functions just to make them shorter
+   - **Measure by cognitive load**: A function is too complex when it requires too much information to understand
 
 ```python
-# Good examples
-def calculate_monthly_revenue(orders):
-    """Calculate total revenue for the current month."""
-    return sum(order.amount for order in orders if order.is_current_month())
+# Good examples - Deep functions that hide complexity
+def process_order(order):
+    """Process a customer order with all necessary validations and calculations.
+    
+    This function handles the complete order processing workflow including
+    validation, pricing, discount application, and persistence. The complexity
+    of the business rules is hidden behind this simple interface.
+    """
+    if not order.is_valid():
+        raise InvalidOrderError("Order validation failed")
+    
+    # Apply complex pricing rules
+    base_total = sum(item.price * item.quantity for item in order.items)
+    discount = calculate_customer_discount(order.customer, base_total)
+    tax = calculate_tax(base_total - discount, order.shipping_address.state)
+    shipping = calculate_shipping_cost(order.items, order.shipping_address)
+    
+    order.total = base_total - discount + tax + shipping
+    order.status = 'processed'
+    
+    # Persist with transaction safety
+    with database.transaction():
+        save_order(order)
+        update_inventory(order.items)
+        send_confirmation_email(order)
+    
+    return order
 
-# Bad examples
-def calc(orders):  # Too vague
-    return sum(o.amt for o in orders if o.curr_mth)
-```
-
-2. **One Level of Abstraction**
-   - Functions should operate at a single level of abstraction
-   - Mixing high-level and low-level operations makes code harder to understand
-   - Put complicated boolean tests in routines to hide details and emphasize significance
-
-```python
-# Good examples
+# Bad examples - Premature decomposition
 def process_order(order):
     """Process a customer order."""
     validate_order(order)
-    calculate_total(order)
-    apply_discounts(order)
-    save_order(order)
+    calculate_order_total(order)
+    save_order_to_database(order)
+    send_email_confirmation(order)
 
 def validate_order(order):
     """Validate order details."""
     if not order.items:
         raise ValueError("Order must contain items")
-    if not order.customer:
-        raise ValueError("Order must have a customer")
 
-# Bad examples
-def process_order(order):
-    """Process a customer order."""
-    if not order.items:  # Mixing validation with processing
-        raise ValueError("Order must contain items")
-    total = sum(item.price for item in order.items)  # Mixing calculation with processing
-    order.total = total
-    db.save(order)  # Mixing persistence with processing
+def calculate_order_total(order):
+    """Calculate order total."""
+    order.total = sum(item.price for item in order.items)
+
+def save_order_to_database(order):
+    """Save order to database."""
+    db.save(order)
+
+def send_email_confirmation(order):
+    """Send email confirmation."""
+    email.send(order.customer.email, "Order confirmed")
+```
+
+2. **Information Hiding and Abstraction**
+   - **Hide implementation details**: Functions should hide complex implementations behind simple interfaces
+   - **Reduce cognitive load**: Minimize the amount of information a developer needs to understand a function
+   - **Document design decisions**: Use comments to explain why, not just what
+   - **Prefer general-purpose over special-purpose**: Design functions that can be reused
+
+```python
+# Good examples - Information hiding
+def calculate_shipping_cost(items, destination):
+    """Calculate shipping cost for items to destination.
+    
+    This function encapsulates the complex shipping calculation logic including
+    weight-based pricing, distance calculations, and special handling rules.
+    The caller doesn't need to know about these implementation details.
+    """
+    # Complex shipping logic hidden from caller
+    total_weight = sum(item.weight * item.quantity for item in items)
+    distance = calculate_distance(warehouse_location, destination)
+    
+    # Apply shipping rules based on weight, distance, and item types
+    base_cost = get_base_shipping_rate(distance)
+    weight_surcharge = calculate_weight_surcharge(total_weight)
+    special_handling = calculate_special_handling(items)
+    
+    return base_cost + weight_surcharge + special_handling
+
+# Bad examples - Exposing implementation details
+def calculate_shipping_cost(items, destination):
+    """Calculate shipping cost."""
+    # Exposes too much implementation detail to caller
+    total_weight = sum(item.weight * item.quantity for item in items)
+    distance = calculate_distance(warehouse_location, destination)
+    base_cost = distance * 0.10  # Exposes pricing formula
+    weight_surcharge = total_weight * 0.05  # Exposes weight formula
+    return base_cost + weight_surcharge
 ```
 
 3. **The Step Down Rule**
@@ -886,15 +939,20 @@ def process_data(data):
 ### 6. Comments and Documentation
 
 1. **Comment Philosophy**
-   - Write self-documenting code first
-   - Use comments only when code cannot express intent clearly
-   - Keep comments close to the code they describe
-   - Update comments when code changes
+   - **Comments are essential**: Comments are not optional; they are a crucial part of software design
+   - **Document design decisions**: Use comments to explain why design choices were made, not just what the code does
+   - **Reduce cognitive load**: Comments help developers understand code without having to rederive knowledge
+   - **Interface documentation**: Comments are part of the interface specification
+   - **Keep comments up-to-date**: Comments must be maintained along with code
 
 ```python
-# Good examples
+# Good examples - Comments that document design decisions
 def calculate_tax(amount, is_exempt=False):
     """Calculate tax for a given amount.
+    
+    This function implements the tax calculation logic based on current
+    state regulations. The tax rate is composed of a base state rate
+    plus local surcharges that vary by jurisdiction.
     
     Args:
         amount (float): The amount to calculate tax for
@@ -902,81 +960,122 @@ def calculate_tax(amount, is_exempt=False):
         
     Returns:
         float: The calculated tax amount
+        
+    Note:
+        Tax rates are updated quarterly. This function uses the rates
+        effective as of 2024-01-01. See tax_rates.py for current rates.
     """
     if is_exempt:
         return 0.0
     
     # Tax calculation follows state regulations updated 2023-01-01
     # Base rate: 6.5%, plus 0.5% local surcharge
+    # These rates are hardcoded here for performance, but should be
+    # updated when new rates are published
     tax_rate = 0.065 + 0.005
     return amount * tax_rate
 
-# Bad examples
+# Bad examples - Missing essential documentation
 def calc_tax(amt, ex=False):  # Bad: Unclear variable names
-    # Calculate tax
     if ex:  # Bad: Unclear condition
         return 0.0
     return amt * 0.07  # Bad: Magic number without explanation
 ```
 
-2. **Good Comments**
-   - Legal notices and copyrights
-   - Intent explanations
-   - Warning of consequences
-   - TODO markers
-   - Important clarifications
+2. **Essential Comments**
+   - **Interface documentation**: Document what each function does, its parameters, and return values
+   - **Design rationale**: Explain why design decisions were made
+   - **Complexity explanations**: Document complex algorithms and business rules
+   - **Assumptions and constraints**: Document what the code assumes and what it cannot handle
+   - **Performance considerations**: Document performance characteristics and trade-offs
 
 ```python
-# Good examples
+# Good examples - Comprehensive documentation
 # Copyright (c) 2024 Company Name. All rights reserved.
 # Licensed under the MIT License.
 
 def process_sensitive_data(data):
-    """Process sensitive user data.
+    """Process sensitive user data with encryption and validation.
+    
+    This function handles PII (Personally Identifiable Information) and
+    must be used with appropriate security measures. The function
+    validates data format, encrypts sensitive fields, and logs access
+    for audit purposes.
     
     WARNING: This function handles PII (Personally Identifiable Information).
     Ensure proper encryption and access controls are in place.
+    
+    Args:
+        data (dict): User data containing potentially sensitive information
+        
+    Returns:
+        dict: Processed and encrypted user data
+        
+    Raises:
+        SecurityError: If data is not properly encrypted
+        ValidationError: If data format is invalid
+        
+    Note:
+        This function is part of the data processing pipeline and must
+        be called within a secure context. See security.md for details.
     """
     if not is_encrypted(data):
         raise SecurityError("Data must be encrypted")
     
     # TODO: Implement rate limiting for bulk processing
     # Current implementation may timeout with large datasets
+    # See issue #1234 for performance optimization plan
     
     # Using list comprehension instead of map() for better readability
-    # and to maintain consistent error handling
+    # and to maintain consistent error handling. The map() function
+    # would require additional error handling that would make the code
+    # more complex without significant performance benefit.
     return [transform(item) for item in data]
 
-# Bad examples
+# Bad examples - Insufficient documentation
 def process_data(data):
     # Process data  # Bad: Redundant comment
     return [x * 2 for x in data]  # Bad: Obvious operation
 ```
 
-3. **Bad Comments**
-   - Redundant explanations
-   - Misleading information
-   - Mandated boilerplate
-   - Attribution comments
-   - Commented-out code
+3. **Implementation Comments**
+   - **Algorithm explanations**: Document complex algorithms and their rationale
+   - **Business rule documentation**: Explain business logic that might not be obvious
+   - **Performance optimizations**: Document why certain optimizations were chosen
+   - **Workarounds and limitations**: Document known issues and their workarounds
+   - **Future considerations**: Document what might need to change in the future
 
 ```python
-# Good examples
+# Good examples - Implementation documentation
 def calculate_discount(order):
-    """Calculate order discount based on customer loyalty."""
-    if order.customer.loyalty_points > 1000:
-        return order.total * 0.1
-    return 0.0
+    """Calculate order discount based on customer loyalty and order value.
+    
+    This function implements the company's discount policy which combines
+    customer loyalty points with order value to determine discount percentage.
+    The policy is designed to reward both frequent customers and large orders.
+    
+    Business Rules:
+    - Base discount: 5% for orders over $100
+    - Loyalty bonus: 1% per 100 loyalty points (max 10%)
+    - Maximum total discount: 15%
+    - New customers (0 points) get no loyalty bonus
+    """
+    # Calculate base discount from order value
+    # This encourages larger orders and provides immediate value
+    base_discount = 0.05 if order.total > 100 else 0.0
+    
+    # Calculate loyalty bonus
+    # This rewards customer retention and encourages repeat business
+    loyalty_bonus = min(order.customer.loyalty_points / 1000, 0.10)
+    
+    # Apply maximum discount cap
+    # This prevents excessive discounts that could hurt profitability
+    total_discount = min(base_discount + loyalty_bonus, 0.15)
+    
+    return order.total * total_discount
 
-# Bad examples
+# Bad examples - Missing business logic documentation
 def calculate_discount(order):
-    # Function to calculate discount  # Bad: Redundant
-    # Added by John Doe on 2024-01-01  # Bad: Use version control instead
-    
-    # Old implementation - keeping for reference  # Bad: Commented-out code
-    # if order.total > 100:
-    #     return order.total * 0.05
-    
     if order.customer.loyalty_points > 1000:  # Check points  # Bad: Obvious
         return order.total * 0.1  # 10% discount  # Bad: Redundant
     return 0.0  # No discount  # Bad: Redundant
@@ -1071,6 +1170,25 @@ def validate_input(data):
 
 ## Common Pitfalls
 
+### Complexity Management
+* **Premature decomposition**: Breaking up functions just to make them shorter without reducing complexity
+* **Shallow modules**: Creating modules with complex interfaces that expose implementation details
+* **Information leakage**: Exposing internal implementation details through public interfaces
+* **Over-abstraction**: Creating abstractions that don't actually hide complexity
+
+### Documentation
+* **Missing design documentation**: Not explaining why design decisions were made
+* **Redundant comments**: Comments that just repeat what the code obviously does
+* **Outdated documentation**: Comments that don't match the current implementation
+* **Missing interface documentation**: Not documenting what functions do and what they expect
+
+### Design Issues
+* **Special-purpose solutions**: Creating code that can only be used for one specific case
+* **Tight coupling**: Creating dependencies that make modules hard to modify independently
+* **Complex interfaces**: Making interfaces that require too much knowledge to use correctly
+* **Inconsistent patterns**: Using different approaches for similar problems
+
+### Technical Issues
 * Using unclear or abbreviated variable names
 * Missing type hints in function signatures
 * Inconsistent indentation (should be 4 spaces)
@@ -1081,12 +1199,76 @@ def validate_input(data):
 * Not using list comprehensions or generator expressions when appropriate
 * Creating god classes that do too much
 * Using global variables when local variables would suffice
-* Not documenting the "why" behind code decisions
 * Writing code that's clever rather than clear
 * Not testing error conditions
 * Not considering performance implications of data structures and algorithms
 
-### 5. Objects and Data Structures
+### 5. Testing Philosophy
+
+1. **Test-Driven Development Considerations**
+   - **Focus on design first**: Design interfaces before writing tests
+   - **Avoid premature testing**: Don't write tests before understanding the problem
+   - **Test the interface, not implementation**: Tests should verify behavior, not internal details
+   - **Bundle testing with implementation**: Write tests after implementing functionality, not before
+
+```python
+# Good examples - Testing after design
+class OrderProcessor:
+    """Process customer orders with comprehensive business logic."""
+    
+    def process_order(self, order):
+        """Process a complete order workflow."""
+        # Implementation focuses on design and complexity management
+        if not order.is_valid():
+            raise InvalidOrderError("Order validation failed")
+        
+        # Complex business logic hidden behind simple interface
+        self._apply_pricing_rules(order)
+        self._handle_payment(order)
+        self._update_inventory(order)
+        
+        return order
+
+# Tests written after implementation, focusing on behavior
+def test_process_order_success():
+    """Test successful order processing."""
+    processor = OrderProcessor()
+    order = create_valid_order()
+    
+    result = processor.process_order(order)
+    
+    assert result.status == 'processed'
+    assert result.total > 0
+
+def test_process_order_invalid():
+    """Test order processing with invalid order."""
+    processor = OrderProcessor()
+    order = create_invalid_order()
+    
+    with pytest.raises(InvalidOrderError):
+        processor.process_order(order)
+
+# Bad examples - Testing before design understanding
+def test_calculate_subtotal():
+    """Test subtotal calculation."""
+    # Tests written before understanding the full problem
+    # May lead to over-decomposition and shallow modules
+    pass
+
+def test_apply_discount():
+    """Test discount application."""
+    # Individual tests for each small function
+    # May not reflect the actual complexity of the system
+    pass
+```
+
+2. **Testing Strategy**
+   - **Integration tests over unit tests**: Focus on testing complete workflows
+   - **Test behavior, not structure**: Verify that the system works correctly
+   - **Minimize test maintenance**: Tests should be stable and not break with implementation changes
+   - **Document test intent**: Explain what each test is verifying and why
+
+### 6. Objects and Data Structures
 
 1. **Object-Oriented Design**
    - Classes should expose abstract interfaces, not just data
